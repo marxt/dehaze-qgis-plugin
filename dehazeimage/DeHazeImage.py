@@ -214,7 +214,7 @@ class DeHazeImage:
     # getting HOT statistic (mean)
     HOThist = zeros((self.band_count,HOTmax +1,256)).astype(dtype(integer))
     HOThistcnt = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
-    HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(integer)
+    HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
     HOThistmin = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
 
     pd = QProgressDialog("Operation in progress.", "Cancel", 0, self.band_count*self.rows_count*self.cols_count) #a1

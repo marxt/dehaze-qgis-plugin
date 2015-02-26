@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/dehazeimage.iml" filepath="$PROJECT_DIR$/.idea/dehazeimage.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dehaze-qgis-plugin.iml" filepath="$PROJECT_DIR$/.idea/dehaze-qgis-plugin.iml" />
     </modules>
   </component>
 </project>

@@ -146,12 +146,12 @@ class DeHazeImage:
     self.CLrect.addPoint(QgsPoint(b.xMaximum(), b.yMaximum()),True)
     self.CLrect.addPoint(QgsPoint(b.xMaximum(), b.yMinimum()),True)
 
-    QMessageBox.about(None,' ',str(self.Left)+ ' '+str(self.Top)+' '+str(self.Right)+ ' '+ str(self.Bottom)  )
+    QMessageBox.about(None,'Dehaze',"Clear pixels selected within:\n" + str(self.Left)+ ' '+str(self.Top)+' '+str(self.Right)+ ' '+ str(self.Bottom) +"\nREady to run calculations..."  )
 
  
   def runHOT(self):
     # open envi driver
-    # limit to envi 1st
+    # limit to envi in the meantime
     if (self.band == None):
       QMessageBox.about(None,'dehaze','load and select image first'  )
       return
@@ -163,7 +163,7 @@ class DeHazeImage:
     driver = gdal.GetDriverByName('ENVI')
     driver.Register()
     
-    # clear cky line pixelsdefinition based on rectangle extents
+    # clear cky line pixels definition based on rectangle extents
     cl = self.lr(self.band[0][self.Top:self.Bottom,self.Left:self.Right].ravel(),self.band[2][self.Top:self.Bottom,self.Left:self.Right].ravel(),self.band[2][self.Top:self.Bottom,self.Left:self.Right].ravel().size)
 
     # HOT coeff
@@ -172,10 +172,10 @@ class DeHazeImage:
 
     # computing for HOT
     # HOT = zeros((rows_count,cols_count)).astype(dtype(float))
-    HOT = (self.band[0]*sin0) - (self.band[2]*cosO)
-    HOT = floor(HOT)
+    HOT = ((self.band[0]*sin0) - (self.band[2]*cosO)).astype(dtype(integer))
+    #HOT = floor(HOT)
     HOTmin = HOT.min()
-    HOT = HOT - HOTmin
+    #HOT = HOT - HOTmin
     HOTmax = HOT.max()
 
     # save HOT file
@@ -198,13 +198,24 @@ class DeHazeImage:
 
     # getting CL statistic (mean)
     CLmean = zeros((self.band_count)).astype(dtype(float))
+
+    # getting CL statistic (minimum)
+    CLmin = zeros((self.band_count)).astype(dtype(integer))
+
     for k in range(self.band_count):
-      CLmean[k] = average(self.band[k][self.Top:self.Bottom,self.Left:self.Right])
+      cll = self.band[k][self.Top:self.Bottom,self.Left:self.Right].ravel().sort()
+      CLmean[k] = average(cll)
+      CLmin[k] = 0
+      e = 0
+      while CLmin[k] == 0:
+        CLmin[k] = cll[e]
+        e += 1
 
     # getting HOT statistic (mean)
-    HOThist = zeros((self.band_count,HOTmax +1,256)).astype(dtype(float))
-    HOThistcnt = zeros((self.band_count,HOTmax +1)).astype(dtype(float))
-    HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(long))    
+    HOThist = zeros((self.band_count,HOTmax +1,256)).astype(dtype(integer))
+    HOThistcnt = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+    HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(integer)
+    HOThistmin = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
 
     pd = QProgressDialog("Operation in progress.", "Cancel", 0, self.band_count*self.rows_count*self.cols_count) #a1
     pd.setWindowModality(Qt.WindowModal)
@@ -214,7 +225,7 @@ class DeHazeImage:
         for i in range(self.rows_count):
             for j in range(self.cols_count):
        
-                HOThist[k][HOT[i][j]][self.band[k][i][j]] = HOThist[k][HOT[i][j]][self.band[k][i][j]]+ 1
+                HOThist[k][HOT[i][j]][self.band[k][i][j]] += 1
                 HOThistsum[k][HOT[i][j]] = HOThistsum[k][HOT[i][j]] + self.band[k][i][j]
                 HOThistcnt[k][HOT[i][j]] = HOThistcnt[k][HOT[i][j]] + 1
                 yy = yy + 1 #a3         
@@ -237,6 +248,19 @@ class DeHazeImage:
       
     # HOThistmean = zeros((self.band_count,HOTmax +1)).astype(dtype(float))
     HOThistmean = HOThistsum / HOThistcnt
+
+    for k in range(self.band_count):
+        for h in range(HOTmax +1):
+            w = 0
+            e = 0
+            while w == 0:
+                try:
+                    w = HOThist[k][h][e]
+                    HOThistmin[k][h]= w
+                    e += 1
+                except:
+                    print HOThist[k][h]
+                    exit()
     
     # computing for f(HOT) use linear regression
     HOTREGbeta1 = zeros((self.band_count)).astype(dtype(float))
@@ -250,7 +274,8 @@ class DeHazeImage:
         for q in range(HOTmax +1):
             # HOThistmean[k][q]  =  HOThistsum[k][q]/HOThistcnt[k][q]
             if (HOThistcnt[k][q] > 0):
-                tempy[tempcnt] = HOThistmean[k][q] - CLmean[k]
+                #tempy[tempcnt] = HOThistmean[k][q] - CLmean[k]
+                tempy[tempcnt] = HOThistmin[k][q] - CLmin[k]
                 tempx[tempcnt] = q
                 tempcnt = tempcnt + 1
                 
@@ -299,45 +324,45 @@ class DeHazeImage:
     # create and show the dialog 
     dlg = DeHazeImageDialog() 
     # show the dialog
-    dlg.show()
-    result = dlg.exec_()
+    #dlg.show()
+    #result = dlg.exec_()
     # See if OK was pressed
-    if result == 1: 
+    #if result == 1:
       # layout is set - open a layer
 
       # load active raster layer
-      HazedLayer = self.iface.activeLayer()
+    HazedLayer = self.iface.activeLayer()
 
-      # need to add checks
-      if (HazedLayer == None):
-        QMessageBox.about(None,'DeHaze','Please Load and Select Image')
-        return
+     # need to add checks
+    if (HazedLayer == None):
+      QMessageBox.about(None,'DeHaze','Please Load and Select Image')
+      return
 
       # get file name
-      fn = HazedLayer.source()      
+    fn = HazedLayer.source()
     
-      gdal.AllRegister()
+    gdal.AllRegister()
 
-      ds = gdal.Open(str(fn), GA_ReadOnly)
+    ds = gdal.Open(str(fn), GA_ReadOnly)
 
       # get image data set information
-      self.cols_count = ds.RasterXSize
-      self.rows_count = ds.RasterYSize
-      self.band_count = ds.RasterCount
-      self.GT = ds.GetGeoTransform()
-      self.Gref = ds.GetProjectionRef()
+    self.cols_count = ds.RasterXSize
+    self.rows_count = ds.RasterYSize
+    self.band_count = ds.RasterCount
+    self.GT = ds.GetGeoTransform()
+    self.Gref = ds.GetProjectionRef()
 
-      QMessageBox.about(None,'DeHaze',HazedLayer.metadata())      
+    QMessageBox.about(None,'DeHaze', "layer loaded: " + HazedLayer.name() + "\n Please select clear pixels...")
 
-      self.band = []
-      for k in range(self.band_count):
-        self.band.append(ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count) )
+    self.band = []
+    for k in range(self.band_count):
+      self.band.append(ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count) )
 
-      ds = None
+    ds = None
 
-      self.CLrect = QgsRubberBand(self.iface.mapCanvas(), True)
-      self.CLrect.setColor (QColor(255,0,0))
-      self.CLrect.setWidth (3)
+    self.CLrect = QgsRubberBand(self.iface.mapCanvas(), True)
+    self.CLrect.setColor (QColor(255,0,0))
+    self.CLrect.setWidth (3)
 
 
 

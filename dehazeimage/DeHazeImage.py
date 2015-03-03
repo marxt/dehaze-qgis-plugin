@@ -152,6 +152,9 @@ class DeHazeImage:
   def runHOT(self):
     # open envi driver
     # limit to envi in the meantime
+
+    hStat = "mean" # "mean"
+
     if (self.band == None):
       QMessageBox.about(None,'dehaze','load and select image first'  )
       return
@@ -174,9 +177,10 @@ class DeHazeImage:
     # HOT = zeros((rows_count,cols_count)).astype(dtype(float))
     HOT = ((self.band[0]*sin0) - (self.band[2]*cosO)).astype(dtype(integer))
     #HOT = floor(HOT)
-    HOTmin = HOT.min()
-    #HOT = HOT - HOTmin
-    HOTmax = HOT.max()
+    HOTmin = amin(HOT)
+    HOT = HOT - HOTmin
+    HOTmin = 0
+    HOTmax = amax(HOT)
 
     # save HOT file
     file2 = QFileDialog.getSaveFileName(None, "Save HOT image file", ".", "ENVI file (*.img)")
@@ -196,20 +200,25 @@ class DeHazeImage:
     # adding HOT image to Q
     hotlayer = self.iface.addRasterLayer(str(fn2), "HOT image")
 
-    # getting CL statistic (mean)
-    CLmean = zeros((self.band_count)).astype(dtype(float))
-
-    # getting CL statistic (minimum)
-    CLmin = zeros((self.band_count)).astype(dtype(integer))
+    if hStat == "mean":
+        # getting CL statistic (mean)
+        CLmean = zeros((self.band_count)).astype(dtype(integer))
+    else:
+        # getting CL statistic (minimum)
+        CLmin = zeros((self.band_count)).astype(dtype(integer))
 
     for k in range(self.band_count):
-      cll = self.band[k][self.Top:self.Bottom,self.Left:self.Right].ravel().sort()
-      CLmean[k] = average(cll)
-      CLmin[k] = 0
-      e = 0
-      while CLmin[k] == 0:
-        CLmin[k] = cll[e]
-        e += 1
+      cll = sort(self.band[k][self.Top:self.Bottom,self.Left:self.Right].ravel())
+      print cll
+
+      if hStat == "mean":
+        CLmean[k] = mean(cll)
+      else:
+        CLmin[k] = 0
+        e = 0
+        while CLmin[k] == 0:
+          CLmin[k] = cll[e]
+          e += 1
 
     # getting HOT statistic (mean)
     HOThist = zeros((self.band_count,HOTmax +1,256)).astype(dtype(integer))
@@ -226,8 +235,8 @@ class DeHazeImage:
             for j in range(self.cols_count):
        
                 HOThist[k][HOT[i][j]][self.band[k][i][j]] += 1
-                HOThistsum[k][HOT[i][j]] = HOThistsum[k][HOT[i][j]] + self.band[k][i][j]
-                HOThistcnt[k][HOT[i][j]] = HOThistcnt[k][HOT[i][j]] + 1
+                HOThistsum[k][HOT[i][j]] += self.band[k][i][j]
+                HOThistcnt[k][HOT[i][j]] += 1
                 yy = yy + 1 #a3         
                 pd.setValue(yy) #a4
                 if (pd.wasCanceled()):
@@ -247,20 +256,22 @@ class DeHazeImage:
                 
       
     # HOThistmean = zeros((self.band_count,HOTmax +1)).astype(dtype(float))
-    HOThistmean = HOThistsum / HOThistcnt
 
-    for k in range(self.band_count):
-        for h in range(HOTmax +1):
-            w = 0
-            e = 0
-            while w == 0:
-                try:
-                    w = HOThist[k][h][e]
-                    HOThistmin[k][h]= w
-                    e += 1
-                except:
-                    print HOThist[k][h]
-                    exit()
+    if hStat == "mean":
+        HOThistmean = HOThistsum / HOThistcnt
+    else:
+        for k in range(self.band_count):
+            for h in range(HOTmax +1):
+                w = 0
+                e = 0
+                while w == 0:
+                    try:
+                      w = HOThist[k][h][e]
+                      HOThistmin[k][h]= w
+                      e += 1
+                    except:
+                      print HOThist[k][h]
+
     
     # computing for f(HOT) use linear regression
     HOTREGbeta1 = zeros((self.band_count)).astype(dtype(float))
@@ -272,14 +283,18 @@ class DeHazeImage:
         tempcnt = 0
     
         for q in range(HOTmax +1):
-            # HOThistmean[k][q]  =  HOThistsum[k][q]/HOThistcnt[k][q]
             if (HOThistcnt[k][q] > 0):
-                #tempy[tempcnt] = HOThistmean[k][q] - CLmean[k]
-                tempy[tempcnt] = HOThistmin[k][q] - CLmin[k]
+                if hStat == "mean":
+                    #HOThistmean[k][q]  =  HOThistsum[k][q]/HOThistcnt[k][q]
+                    tempy[tempcnt] = HOThistmean[k][q] - CLmean[k]
+                else:
+                    tempy[tempcnt] = HOThistmin[k][q] - CLmin[k]
+
                 tempx[tempcnt] = q
                 tempcnt = tempcnt + 1
+
                 
-        # Linear Regression of correction vs HOT values 
+        # Linear Regression of correction vs HOT values
         temp = self.lr(tempx,tempy,tempcnt)
         HOTREGbeta1[k] = temp[0]
         HOTREGbeta0[k] = temp[1]
@@ -293,7 +308,9 @@ class DeHazeImage:
     b_out = []
     
     for k in range(self.band_count):
-        b_out.append( self.band[k] - ((HOTREGbeta1[k] * HOT) + HOTREGbeta0[k]) * greater(((HOTREGbeta1[k] * HOT) + HOTREGbeta0[k]),0))
+        val = ((HOTREGbeta1[k] * HOT) + HOTREGbeta0[k])
+        b_out.append( self.band[k] - (greater(val,0.0) * val))
+        #b_out.append( self.band[k] - (HOTREGbeta1[k] * HOT) - HOTREGbeta0[k])
 
     QMessageBox.about(None,str(outDataset),'computations done ' )
       

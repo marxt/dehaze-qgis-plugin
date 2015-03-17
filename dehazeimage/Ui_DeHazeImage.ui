@@ -1,33 +1,95 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>DeHazeImage</class>
- <widget class="QDialog" name="DeHazeImage" >
-  <property name="geometry" >
+ <widget class="QDialog" name="DeHazeImage">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>226</width>
+    <height>162</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>DeHazeImage</string>
   </property>
-  <widget class="QDialogButtonBox" name="buttonBox" >
-   <property name="geometry" >
+  <widget class="QWidget" name="">
+   <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>240</y>
-     <width>341</width>
-     <height>32</height>
+     <x>20</x>
+     <y>10</y>
+     <width>191</width>
+     <height>141</height>
     </rect>
    </property>
-   <property name="orientation" >
-    <enum>Qt::Horizontal</enum>
-   </property>
-   <property name="standardButtons" >
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_4">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QLabel" name="layerLabel">
+        <property name="text">
+         <string>Select Input Layer</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="layerComboBox"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QLabel" name="labelBlueBand">
+          <property name="text">
+           <string>blue band</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="blueComboBox"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QLabel" name="labelRedBand">
+          <property name="text">
+           <string>red band</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="redComboBox"/>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QDialogButtonBox" name="buttonBox">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="standardButtons">
+       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
+  <zorder>buttonBox</zorder>
+  <zorder>blueComboBox</zorder>
+  <zorder>redComboBox</zorder>
+  <zorder>labelBlueBand</zorder>
+  <zorder>labelRedBand</zorder>
+  <zorder>toolButton</zorder>
+  <zorder>layerComboBox</zorder>
+  <zorder>layerLabel</zorder>
+  <zorder></zorder>
  </widget>
  <resources/>
  <connections>
@@ -37,11 +99,11 @@
    <receiver>DeHazeImage</receiver>
    <slot>accept()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>248</x>
      <y>254</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>157</x>
      <y>274</y>
     </hint>
@@ -53,11 +115,11 @@
    <receiver>DeHazeImage</receiver>
    <slot>reject()</slot>
    <hints>
-    <hint type="sourcelabel" >
+    <hint type="sourcelabel">
      <x>316</x>
      <y>260</y>
     </hint>
-    <hint type="destinationlabel" >
+    <hint type="destinationlabel">
      <x>286</x>
      <y>274</y>
     </hint>

@@ -2,33 +2,115 @@
 <ui version="4.0">
  <class>DeHazeImage</class>
  <widget class="QDialog" name="DeHazeImage">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>226</width>
-    <height>162</height>
+    <width>340</width>
+    <height>321</height>
    </rect>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::NoFocus</enum>
   </property>
   <property name="windowTitle">
    <string>DeHazeImage</string>
   </property>
-  <widget class="QWidget" name="">
+  <property name="modal">
+   <bool>false</bool>
+  </property>
+  <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>280</y>
+     <width>176</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+   <property name="standardButtons">
+    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>10</y>
-     <width>191</width>
-     <height>141</height>
+     <y>80</y>
+     <width>299</width>
+     <height>89</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_4">
+   <layout class="QVBoxLayout" name="verticalLayout_5">
+    <item>
+     <widget class="QLabel" name="labelExtents">
+      <property name="text">
+       <string>Clear Sky Extents</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>UL:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>LR:</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="lineEditMinX"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="lineEditMinY"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLineEdit" name="lineEditMaxX"/>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineEditMaxY"/>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>21</x>
+     <y>11</y>
+     <width>299</width>
+     <height>56</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_3">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
        <widget class="QLabel" name="layerLabel">
         <property name="text">
-         <string>Select Input Layer</string>
+         <string>Input Layer</string>
         </property>
        </widget>
       </item>
@@ -44,7 +126,7 @@
         <item>
          <widget class="QLabel" name="labelBlueBand">
           <property name="text">
-           <string>blue band</string>
+           <string>Blue band</string>
           </property>
          </widget>
         </item>
@@ -58,7 +140,7 @@
         <item>
          <widget class="QLabel" name="labelRedBand">
           <property name="text">
-           <string>red band</string>
+           <string>Red band</string>
           </property>
          </widget>
         </item>
@@ -69,27 +151,92 @@
       </item>
      </layout>
     </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>180</y>
+     <width>161</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>CL-HOT Matching Stat</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>240</y>
+     <width>238</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
     <item>
-     <widget class="QDialogButtonBox" name="buttonBox">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Correction Function Deg.</string>
       </property>
-      <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </widget>
+    </item>
+    <item>
+     <widget class="QSpinBox" name="spinBoxPolyDeg">
+      <property name="whatsThis">
+       <string>Degree of Correction Function. e.g. 1 -&gt; linear</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>30</number>
       </property>
      </widget>
     </item>
    </layout>
   </widget>
-  <zorder>buttonBox</zorder>
-  <zorder>blueComboBox</zorder>
-  <zorder>redComboBox</zorder>
-  <zorder>labelBlueBand</zorder>
-  <zorder>labelRedBand</zorder>
-  <zorder>toolButton</zorder>
-  <zorder>layerComboBox</zorder>
-  <zorder>layerLabel</zorder>
-  <zorder></zorder>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>200</y>
+     <width>257</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_5">
+    <item>
+     <widget class="QRadioButton" name="radioButtonMean">
+      <property name="text">
+       <string>Mean</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="radioButtonPercentile">
+      <property name="text">
+       <string>Percentile</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QDoubleSpinBox" name="doubleSpinPerc">
+      <property name="maximum">
+       <double>100.000000000000000</double>
+      </property>
+      <property name="value">
+       <double>5.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
  </widget>
  <resources/>
  <connections>

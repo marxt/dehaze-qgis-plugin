@@ -54,19 +54,12 @@ class DeHazeImage:
     # connect the action to the run method
     QObject.connect(self.action, SIGNAL("triggered()"), self.run)
 
-    self.actionRunHot = QAction(QIcon(":/plugins/dehazeimage/mAction.png"),"start HOT Haze removal", self.iface.mainWindow())
-    QObject.connect( self.actionRunHot, SIGNAL("triggered()"), self.runHOT)
-      
-    self.actionMarkCL = QAction(QIcon(":/plugins/dehazeimage/mActionZoomFullExtent.png"),"Clear Sky Region Select", self.iface.mainWindow())
-    QObject.connect( self.actionMarkCL, SIGNAL("activated()"), self.MarkCLactivate)
-  
+
     # Create a toolbar
     self.toolbar = self.iface.addToolBar("HOT")
       
     # Add the actions to the toolbar
     self.toolbar.addAction(self.action)
-    self.toolbar.addAction(self.actionMarkCL)
-    self.toolbar.addAction(self.actionRunHot)
 
     # tool created to get marked CL
     self.toolMarkCL = regionTool.regionTool(self.iface.mapCanvas())
@@ -80,23 +73,10 @@ class DeHazeImage:
     # Remove the plugin menu item and icon
     #self.iface.removePluginMenu("&De Haze (HOT)",self.action)
     self.iface.removeToolBarIcon(self.action)
-    self.iface.removeToolBarIcon(self.actionMarkCL)
-    self.iface.removeToolBarIcon(self.actionRunHot)
+
     if self.CLrect != None:
       self.CLrect.reset(True)
       
-  def histeq(self,im,nbr_bins=256):
-
-  #get image histogram
-    imhist,bins = histogram(im.flatten(),nbr_bins,normed=True)
-    cdf = imhist.cumsum() #cumulative distribution function
-    cdf = (nbr_bins - 1) * cdf / cdf[-1] #normalize
-
-   #use linear interpolation of cdf to find new pixel values
-    im2 = interp(im.flatten(),bins[:-1],cdf)
-
-    return im2.reshape(im.shape), cdf
-
   def lr(self,x,y,n):
     # linear regression 
     xbar = x.sum()/n;
@@ -115,140 +95,161 @@ class DeHazeImage:
     b = ybar - m * xbar
     return [m,b]
   
-  def MarkCLactivate(self):
-    # sets CL select tool as map tool
-    self.iface.mapCanvas().setMapTool(self.toolMarkCL)
-    if self.CLrect == None:
-      QMessageBox.about(None,'dehaze','load and select image first'  )
-      return
-    self.CLrect.reset(True)
-    
+  def ExtChanged(self):
+      a = self.lineEditMaxX.text()
+      b = self.lineEditMaxY.text()
+      c = self.lineEditMinX.text()
+      d = self.lineEditMinY.text()
+
+      if a != "" and b != "" and c != "" and d != "":
+
+          try:
+              xMax = float(a)
+              yMax = float(b)
+              xMin = float(c)
+              yMin = float(d)
+
+              self.CLrect.reset(True)
+              self.CLrect.addPoint(QgsPoint(xMin, yMin),True)
+              self.CLrect.addPoint(QgsPoint(xMin, yMax),True)
+              self.CLrect.addPoint(QgsPoint(xMax, yMax),True)
+              self.CLrect.addPoint(QgsPoint(xMax, yMin),True)
+              self.CLrect.addPoint(QgsPoint(xMin, yMin),True)
+
+          except:
+              QMessageBox.about(None,'dehaze','Please enter numerical values')
+              return
+
+  def setExt(self):
+      try:
+          xMax = float(self.lineEditMaxX.text())
+          yMax = float(self.lineEditMaxY.text())
+          xMin = float(self.lineEditMinX.text())
+          yMin = float(self.lineEditMinY.text())
+      except:
+          return 1
+
+
+      if (self.Gref == ''):
+          # not georeferenced
+          self.Left = max (xMin, 0)
+          self.Right = min (xMax, self.cols_count )
+          self.Bottom = min ((yMin*-1),self.rows_count)
+          self.Top = max ((yMax*-1),0)
+      else:
+          # georeferenced
+          tempXmin = (xMin - self.GT[0]) / self.GT[1]
+          tempXmax = (xMax - self.GT[0]) / self.GT[1]
+          tempYmax = (yMin - self.GT[3]) / self.GT[5]
+          tempYmin = (yMax - self.GT[3]) / self.GT[5]
+          self.Left = max (tempXmin, 0)
+          self.Right = min (tempXmax, self.cols_count )
+          self.Top = max (tempYmin,0)
+          self.Bottom = min (tempYmax,self.rows_count)
+      return 0
 
   def MarkCL(self,b):
     # after selecting CL pixels get extent of region
-    # chack if image is selected
-    if self.Gref == None:
-      QMessageBox.about(None,'dehaze','load and select image first'  )
-      return
-    self.CLrect.reset(True)
-     # check if georeferenced
-    if (self.Gref == ''):
-      # not georeferenced
-      self.Left = max (b.xMinimum(), 0)
-      self.Right = min (b.xMaximum(), self.cols_count )
-      self.Bottom = min ((b.yMinimum()*-1),self.rows_count)
-      self.Top = max ((b.yMaximum()*-1),0)
-    else:
-      # georeferenced
-      tempXmin = (b.xMinimum()- self.GT[0]) / self.GT[1]
-      tempXmax = (b.xMaximum()- self.GT[0]) / self.GT[1]
-      tempYmax = (b.yMinimum()- self.GT[3]) / self.GT[5]
-      tempYmin = (b.yMaximum()- self.GT[3]) / self.GT[5]
-      self.Left = max (tempXmin, 0)
-      self.Right = min (tempXmax, self.cols_count )
-      self.Top = max (tempYmin,0)
-      self.Bottom = min (tempYmax,self.rows_count)
-      
-    #QMessageBox.about(None,' ',str(b.xMinimum())+' '+str(b.yMinimum())+ ' '+ str(b.xMaximum())+ ' '+str(b.yMaximum())  )
-    # QMessageBox.about(None,' ',str(tempXmin)+ ' '+str(tempYmin)+' '+str(tempXmax)+ ' '+ str(tempYmax)  )
+    # check if image is selected
 
+     # check if georeferenced
+    self.lineEditMaxX.setText(str(b.xMaximum()))
+    self.lineEditMaxY.setText(str(b.yMaximum()))
+    self.lineEditMinX.setText(str(b.xMinimum()))
+    self.lineEditMinY.setText(str(b.yMinimum()))
+
+    self.CLrect.reset(True)
     self.CLrect.addPoint(QgsPoint(b.xMinimum(), b.yMinimum()),True)
     self.CLrect.addPoint(QgsPoint(b.xMinimum(), b.yMaximum()),True)
     self.CLrect.addPoint(QgsPoint(b.xMaximum(), b.yMaximum()),True)
     self.CLrect.addPoint(QgsPoint(b.xMaximum(), b.yMinimum()),True)
+    self.CLrect.addPoint(QgsPoint(b.xMinimum(), b.yMinimum()),True)
 
-    QMessageBox.about(None,'Dehaze',"Clear pixels selected within:\n" + str(self.Left)+ ' '+str(self.Top)+' '+str(self.Right)+ ' '+ str(self.Bottom) +"\nReady to run calculations..."  )
-
- 
   def runHOT(self):
-    # open envi driver
-    # limit to envi in the meantime
+      # open envi driver
+      # limit to envi in the meantime
 
-    hStat = "mean" # "mean"
-
-    if (self.band == None):
-      QMessageBox.about(None,'dehaze','load and select image first'  )
-      return
-    if (self.Top == None):
-      QMessageBox.about(None,'dehaze','select Clear sky pixels on image first'  )
-      return
-
-    driver = gdal.GetDriverByName('ENVI')
-    driver.Register()
+      driver = gdal.GetDriverByName('ENVI')
+      driver.Register()
     
-    # clear cky line pixels definition based on rectangle extents
-    cl = self.lr(self.band[self.blueBand][self.Top:self.Bottom,self.Left:self.Right].ravel(),self.band[self.redBand][self.Top:self.Bottom,self.Left:self.Right].ravel(),self.band[self.redBand][self.Top:self.Bottom,self.Left:self.Right].ravel().size)
+      # clear cky line pixels definition based on rectangle extents
+      blueCL = self.band[self.blueBand][self.Top:self.Bottom,self.Left:self.Right].ravel()
+      redCL = self.band[self.redBand][self.Top:self.Bottom,self.Left:self.Right].ravel()
+      sizeCL = redCL.size
+      cl = self.lr(blueCL,redCL,sizeCL)
 
-    # HOT coeff
-    sin0 = math.sin(math.atan(cl[0]))
-    cosO = math.cos(math.atan(cl[0]))
+      # HOT coeff
+      sin0 = math.sin(math.atan(cl[0]))
+      cosO = math.cos(math.atan(cl[0]))
 
-    # computing for HOT
-    # HOT = zeros((rows_count,cols_count)).astype(dtype(float))
-    HOT = ((self.band[self.blueBand]*sin0) - (self.band[self.redBand]*cosO)).astype(dtype(int16))
+      # computing for HOT
+      HOT = zeros((rows_count,cols_count)).astype(dtype(integer)
+      HOT = ((self.band[self.blueBand]*sin0) - (self.band[self.redBand]*cosO))
 
+      clMeanHOT = mean(HOT[self.Top:self.Bottom,self.Left:self.Right])
+      clMaxHOT = amax(HOT[self.Top:self.Bottom,self.Left:self.Right])
+      print "max CL Hot", clMaxHOT
+      print "min CL Hot", clMeanHOT
 
-    clMeanHOT = mean(HOT[self.Top:self.Bottom,self.Left:self.Right])
-    clMaxHOT = mean(HOT[self.Top:self.Bottom,self.Left:self.Right])
-    print "max CL Hot", clMaxHOT
-    print "min CL Hot", clMeanHOT
+      #normalization/translation
+      HOTmin = amin(HOT)
+      HOT = HOT - HOTmin
+      HOTmax = int(amax(HOT))
 
-    #HOTmin = amin(HOT)
-    HOTmin = clMaxHOT
-    HOT = HOT - HOTmin
-    m = greater(HOT,0.0)
-    HOT *= m
-    HOTmin = 0
-    HOTmax = int(amax(HOT))
-    #HOT = self.histeq(HOT,HOTmax)[0]
+      print HOT
+      #HOT = self.histeq(HOT,HOTmax)[0]
 
-    #QMessageBox.about(None,"test",str(HOTmax) + "\n" + str(sin0))
+      #QMessageBox.about(None,"test",str(HOTmax) + "\n" + str(sin0))
 
-    # save HOT file
-    file2 = QFileDialog.getSaveFileName(None, "Save HOT image file", ".", "ENVI file (*.img)")
-    if file2 == '':
-      return
-    fileInfo2 = QFileInfo(file2)
-    fn2 = fileInfo2.filePath()
+      # save HOT file
+      file2 = QFileDialog.getSaveFileName(None, "Save HOT image file", ".", "ENVI file (*.img)")
+      if file2 == '':
+          return
+      fileInfo2 = QFileInfo(file2)
+      fn2 = fileInfo2.filePath()
       
-    outDatasetHOT = driver.Create(str(fn2), self.cols_count, self.rows_count, 1, GDT_Int16)
-    outDatasetHOT.SetGeoTransform(self.GT)
-    outDatasetHOT.SetProjection(self.Gref)
-    outBandHOT = outDatasetHOT.GetRasterBand(1)
-    outBandHOT.WriteArray(HOT, 0, 0)
-    outBandHOT.FlushCache()
+      outDatasetHOT = driver.Create(str(fn2), self.cols_count, self.rows_count, 1, GDT_Int16)
+      outDatasetHOT.SetGeoTransform(self.GT)
+      outDatasetHOT.SetProjection(self.Gref)
+      outBandHOT = outDatasetHOT.GetRasterBand(1)
+      outBandHOT.WriteArray(HOT, 0, 0)
+      outBandHOT.FlushCache()
 
 
-    outBandHOT = None
-    outDatasetHOT = None
+      outBandHOT = None
+      outDatasetHOT = None
 
-    # adding HOT image to Q
-    hotlayer = self.iface.addRasterLayer(str(fn2), "HOT image")
+      # adding HOT image to Q
+      hotlayer = self.iface.addRasterLayer(str(fn2), "HOT image")
 
-    #getting CL statistic (mean)
-    CLmean = zeros((self.band_count)).astype(dtype(integer))
+      #getting CL statistic (mean)
+      CLstat = zeros((self.band_count)).astype(dtype(integer))
 
-    for k in range(self.band_count):
-      cll = sort(self.band[k][self.Top:self.Bottom,self.Left:self.Right].ravel())
-      print cll
+      for k in range(self.band_count):
+          cll = self.band[k][self.Top:self.Bottom,self.Left:self.Right]
+          #print cll
+          if self.statMatch == "percentile":
+              CLstat[k] = percentile(cll,self.Percentile)
+          elif self.statMatch == "mean":
+              CLstat[k] = mean(cll)
+          else:
+              CLstat[k] = percentile(cll,self.Percentile)
 
-      CLmean[k] = mean(cll)
+      """
+      # getting HOT statistic (mean)
+      HOThist = zeros((self.band_count,HOTmax +1,self.maxVal)).astype(integer)
+      HOThistcnt = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+      HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
 
-    # getting HOT statistic (mean)
-    #HOThist = zeros((self.band_count,HOTmax +1,self.maxVal)).astype(integer)
-    HOThistcnt = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
-    HOThistsum = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
-
-
-    pd = QProgressDialog("Operation in progress.", "Cancel", 0, self.band_count*self.rows_count*self.cols_count) #a1
-    pd.setWindowModality(Qt.WindowModal)
-    yy = 0 #a2
+      pd = QProgressDialog("Operation in progress.", "Cancel", 0, self.band_count*self.rows_count*self.cols_count) #a1
+      pd.setWindowModality(Qt.WindowModal)
+      yy = 0 #a2
     
-    for k in range(self.band_count):
+      for k in range(self.band_count):
         for i in range(self.rows_count):
             for j in range(self.cols_count):
-       
-                #HOThist[k][HOT[i][j]][self.band[k][i][j]] += 1
+
+                HOThist[k][HOT[i][j]][self.band[k][i][j]] += 1
                 HOThistsum[k][HOT[i][j]] += self.band[k][i][j]
                 HOThistcnt[k][HOT[i][j]] += 1
                 yy = yy + 1 #a3         
@@ -267,101 +268,154 @@ class DeHazeImage:
                   self.CLrect.reset(True)
                   return 1
 
-    HOThistmean = HOThistsum / HOThistcnt
+      HOThistmean = HOThistsum / HOThistcnt
+      """
+      HOTstat = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+      HOTvalues = unique(HOT[:])
+      startHOTval = int(percentile(HOTvalues,2))
+      stopHOTval= int(percentile(HOTvalues,98))
 
-    # computing for f(HOT) use linear regression
-    HOTREGbeta1 = zeros((self.band_count)).astype(dtype(float))
-    HOTREGbeta0 = zeros((self.band_count)).astype(dtype(float))
-    
-    for k in range(self.band_count):
-        tempx = zeros((HOTmax +1)).astype(dtype(float))
-        tempy = zeros((HOTmax +1)).astype(dtype(float))
-        tempcnt = 0
-    
-        for q in range(HOTmax +1):
-            if (HOThistcnt[k][q] > 0):
-                #HOThistmean[k][q]  =  HOThistsum[k][q]/HOThistcnt[k][q]
-                tempy[tempcnt] = HOThistmean[k][q] - CLmean[k]
-                tempx[tempcnt] = q
-                tempcnt = tempcnt + 1
+      # computing for f(HOT) use linear regression
+      HOTREGbeta1 = zeros((self.band_count)).astype(dtype(float))
+      HOTREGbeta0 = zeros((self.band_count)).astype(dtype(float))
+      p = []
 
-                
-        # Linear Regression of correction vs HOT values
-        temp = self.lr(tempx,tempy,tempcnt)
-        HOTREGbeta1[k] = temp[0]
-        HOTREGbeta0[k] = temp[1]
+      pd = QProgressDialog("Operation in progress.", "Cancel", 0, self.band_count*HOTvalues.size) #a1
+      pd.setWindowModality(Qt.WindowModal)
+      yy = 0 #a2
+
+
+      for k in range(self.band_count):
+          #lr
+          tempx = zeros((HOTmax +1)).astype(dtype(float))
+          tempy = zeros((HOTmax +1)).astype(dtype(float))
+          tempcnt = 0
+
+          print "band" + str(k)
+          for q in HOTvalues:
+              m = equal(HOT,q)
+              e = extract(m,self.band[k][:])
+
+              if self.statMatch == "percentile":
+                  HOTstat[k,q] = percentile(e,self.Percentile)
+              elif self.statMatch == "mean":
+                  HOTstat[k,q] = mean(e)
+              else:
+                  HOTstat[k,q] = percentile(e,self.Percentile)
+
+
+              print "Band" + str(k) +" HOT:" +str(q) + " - " + str(HOTstat[k,q])
+                  #lr
+              tempy[tempcnt] = HOTstat[k,q] - CLstat[k]
+              tempx[tempcnt] = q
+              tempcnt += 1
+
+              m = None
+              yy = yy + 1 #a3
+              pd.setValue(yy) #a4
+              if (pd.wasCanceled()):
+                  self.Top = None
+                  self.Bottom = None
+                  self.Left = None
+                  self.Right = None
+                  self.band = None
+                  self.cols_count = None
+                  self.rows_count = None
+                  self.band_count = None
+                  self.GT = None
+                  self.Gref = None
+                  self.CLrect.reset(True)
+                  return 1
+
+          # Linear Regression of correction vs HOT values
+          z = polyfit(tempx[:tempcnt+1], tempy[:tempcnt+1], self.PolyDeg)
+          p.append(z)
+          temp = self.lr(tempx[:tempcnt+1],tempy[:tempcnt+1],tempcnt)
+          HOTREGbeta1[k] = temp[0]
+          HOTREGbeta0[k] = temp[1]
+
           
-    file3 = QFileDialog.getSaveFileName(None, "Save dehazed image", ".", "Raster file (*.img)")
-    fileInfo3 = QFileInfo(file3)
-    fn3 = fileInfo3.filePath()
+      file3 = QFileDialog.getSaveFileName(None, "Save dehazed image", ".", "Raster file (*.img)")
+      fileInfo3 = QFileInfo(file3)
+      fn3 = fileInfo3.filePath()
 
-    outDataset = driver.Create(str(fn3), self.cols_count, self.rows_count, self.band_count, GDT_Float32)
-    outDataset.SetGeoTransform(self.GT)
-    outDataset.SetProjection(self.Gref)
+      outDataset = driver.Create(str(fn3), self.cols_count, self.rows_count, self.band_count, GDT_Int16)
+      outDataset.SetGeoTransform(self.GT)
+      outDataset.SetProjection(self.Gref)
 
-    #QMessageBox.about(None,"test",str(clMaxHOT))
-    mask = greater(HOT,clMaxHOT)
+      QMessageBox.about(None,"f(HOT)","m:" + str( HOTREGbeta1) + "\nb:" + str(HOTREGbeta0) + "\n" + str(p))
+      mask = greater(HOT,clMaxHOT)
 
-    """
-    moutDataset = driver.Create("mask.img", self.cols_count, self.rows_count, 1, GDT_Int16)
-    moutDataset.SetGeoTransform(self.GT)
-    moutDataset.SetProjection(self.Gref)
-    moutDataset.GetRasterBand(1).WriteArray(mask, 0, 0)
-    moutDataset.GetRasterBand(1).FlushCache()
-    self.iface.addRasterLayer("mask.img", "mask")
-    """
+      HOT = HOT - clMeanHOT
+      HOT = greater(HOT,0) * HOT
+      for k in range(self.band_count):
 
-    for k in range(self.band_count):
-        val = ((HOTREGbeta1[k] * HOT) + HOTREGbeta0[k])
-        val = self.band[k] - val #* mask #(greater(val,0.0) * val) #* mask
-        val = greater(val,0.0) * val
-        outDataset.GetRasterBand(k +1).WriteArray(val, 0, 0)
-        outDataset.GetRasterBand(k +1).FlushCache()
+          pp = poly1d(p[k])
+          val = pp(HOT)
+          #val = ((HOTREGbeta1[k] * HOT ) + HOTREGbeta0[k])
+          val = greater(val,0.0) * val
+          val = self.band[k] - val #* mask
+          outDataset.GetRasterBand(k +1).WriteArray(val, 0, 0)
+          outDataset.GetRasterBand(k +1).FlushCache()
 
-    QMessageBox.about(None,str(outDataset),'computations done ' )
+      QMessageBox.about(None,"dehaze",'computations done ' )
 
-    outDataset = None
+      outDataset = None
 
-    # add dehazed layer to Q
-    dehazedlayer = self.iface.addRasterLayer(str(fn3), "dehazedimage")
+      # add dehazed layer to Q
+      dehazedlayer = self.iface.addRasterLayer(str(fn3), "dehazedimage")
 
-    # cleanup
-    self.Top = None
-    self.Bottom = None
-    self.Left = None
-    self.Right = None
-    self.band = None
-    self.cols_count = None
-    self.rows_count = None
-    self.band_count = None
-    self.GT = None
-    self.Gref = None
-    self.CLrect.reset(True)
+      # cleanup
+      self.Top = None
+      self.Bottom = None
+      self.Left = None
+      self.Right = None
+      self.band = None
+      self.cols_count = None
+      self.rows_count = None
+      self.band_count = None
+      self.GT = None
+      self.Gref = None
+      self.CLrect.reset(True)
 
   # run method that performs all the real work
 
   def prepDlg(self):
-    self.dlg = DeHazeImageDialog()
-    self.layerComboBox = self.dlg.findChild(QComboBox, "layerComboBox")
-    self.blueComboBox = self.dlg.findChild(QComboBox, "blueComboBox")
-    self.redComboBox = self.dlg.findChild(QComboBox, "redComboBox")
-    QObject.connect(self.layerComboBox, SIGNAL("currentIndexChanged(const QString&)"), self.rasterLayerChanged)
+      self.dlg = DeHazeImageDialog()
+      self.dlg.setWindowFlags(Qt.WindowStaysOnTopHint)
+      self.layerComboBox = self.dlg.findChild(QComboBox, "layerComboBox")
+      self.blueComboBox = self.dlg.findChild(QComboBox, "blueComboBox")
+      self.redComboBox = self.dlg.findChild(QComboBox, "redComboBox")
+      self.lineEditMaxX = self.dlg.findChild(QLineEdit, "lineEditMaxX")
+      self.lineEditMaxY = self.dlg.findChild(QLineEdit, "lineEditMaxY")
+      self.lineEditMinX = self.dlg.findChild(QLineEdit, "lineEditMinX")
+      self.lineEditMinY = self.dlg.findChild(QLineEdit, "lineEditMinY")
+      self.spinBoxPolyDeg = self.dlg.findChild(QSpinBox, "spinBoxPolyDeg")
+      self.doubleSpinPerc = self.dlg.findChild(QDoubleSpinBox, "doubleSpinPerc")
+      self.radioButtonMean = self.dlg.findChild(QRadioButton,"radioButtonMean")
+      self.radioButtonPercentile = self.dlg.findChild(QRadioButton,"radioButtonPercentile")
 
-    mc = self.iface.mapCanvas()
+      QObject.connect(self.layerComboBox, SIGNAL("currentIndexChanged(const QString&)"), self.rasterLayerChanged)
+      QObject.connect(self.lineEditMaxX, SIGNAL("textChanged(const QString&)"), self.ExtChanged)
+      QObject.connect(self.lineEditMaxY, SIGNAL("textChanged(const QString&)"), self.ExtChanged)
+      QObject.connect(self.lineEditMinX, SIGNAL("textChanged(const QString&)"), self.ExtChanged)
+      QObject.connect(self.lineEditMinY, SIGNAL("textChanged(const QString&)"), self.ExtChanged)
 
-    layers = []
-    for layer in mc.layers():
-      if layer.type() == QgsMapLayer.RasterLayer:
-        layers += [ layer.name() ]
-    self.layerComboBox.clear()
-    self.layerComboBox.insertItems(len(layers), layers)
+      mc = self.iface.mapCanvas()
+
+      layers = []
+      for layer in mc.layers():
+          if layer.type() == QgsMapLayer.RasterLayer:
+              layers += [ layer.name() ]
+      self.layerComboBox.clear()
+      self.layerComboBox.insertItems(len(layers), layers)
 
 
   def rasterLayerChanged(self, layername):
     self.hl = QgsMapLayerRegistry.instance().mapLayersByName(layername)[0]
     bc = self.hl.bandCount()
     if bc < 2:
-      QMessageBox.about(None,'DeHaze','Select Image an image with a blue and red band')
+        QMessageBox.about(None,'DeHaze','Select Image an image with a blue and red band')
 
     l = []
     for n in range(bc):
@@ -372,68 +426,87 @@ class DeHazeImage:
     self.redComboBox.insertItems(len(l),l)
 
     if bc >= 3:
-      self.blueComboBox.setCurrentIndex(0)
-      self.redComboBox.setCurrentIndex(2)
+        self.blueComboBox.setCurrentIndex(0)
+        self.redComboBox.setCurrentIndex(2)
 
       #QMessageBox.about(None,str(x),'Testing signals')
 
   def run(self):
-    self.prepDlg()
-    # create and show the dialog 
-    #dlg = DeHazeImageDialog()
-    # show the dialog
-    self.dlg.show()
-    result = self.dlg.exec_()
-    # See if OK was pressed
-    if result == 0:
-      return
-      # layout is set - open a layer
+      #run prep for dialog entries
+      self.prepDlg()
 
-      # load active raster layer
-    #HazedLayer = self.iface.activeLayer()
-    HazedLayer = self.hl
+      #enable the selection tool
+      self.iface.mapCanvas().setMapTool(self.toolMarkCL)
 
-     # need to add checks
-    if (HazedLayer == None):
-      QMessageBox.about(None,'DeHaze','Please Load and Select Image')
-      return
+      # initializing rubberband
+      self.CLrect = QgsRubberBand(self.iface.mapCanvas(), True)
+      self.CLrect.setColor (QColor(255,0,0))
+      self.CLrect.setWidth (3)
+
+      # show the dialog
+      self.dlg.show()
+      result = self.dlg.exec_()
+      self.iface.mapCanvas().setMapTool(None)
+
+      # See if OK was pressed
+      if result == 0:
+          self.iface.actionPan().trigger()
+          self.CLrect.reset(True)
+          return
+
+      try:
+          self.hl
+      except:
+          QMessageBox.about(None,'DeHaze','Please Load and Select Image')
+          return
 
       # get file name
-    fn = HazedLayer.source()
-    
-    gdal.AllRegister()
+      fn = self.hl.source()
 
-    ds = gdal.Open(str(fn), GA_ReadOnly)
+      # opening raster files
+      gdal.AllRegister()
+      ds = gdal.Open(str(fn), GA_ReadOnly)
 
       # get image data set information
-    self.cols_count = ds.RasterXSize
-    self.rows_count = ds.RasterYSize
-    self.band_count = ds.RasterCount
-    self.GT = ds.GetGeoTransform()
-    self.Gref = ds.GetProjectionRef()
-    self.blueBand = self.blueComboBox.currentIndex()
-    self.redBand = self.redComboBox.currentIndex()
-
-    QMessageBox.about(None,'DeHaze', "layer loaded: " + HazedLayer.name() + "\n"+str(self.redBand) + str(self.blueBand)+" \n Please select clear pixels...")
-
-    self.maxVal = 0.0
-    self.band = []
-    for k in range(self.band_count):
-      curBand = ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count)
-      self.maxVal = max(amax(curBand),self.maxVal)
-      self.band.append( curBand )
-
-    self.maxVal = int(math.ceil(self.maxVal))
-    ds = None
-
-    self.CLrect = QgsRubberBand(self.iface.mapCanvas(), True)
-    self.CLrect.setColor (QColor(255,0,0))
-    self.CLrect.setWidth (3)
+      self.cols_count = ds.RasterXSize
+      self.rows_count = ds.RasterYSize
+      self.band_count = ds.RasterCount
+      self.GT = ds.GetGeoTransform()
+      self.Gref = ds.GetProjectionRef()
+      self.blueBand = self.blueComboBox.currentIndex()
+      self.redBand = self.redComboBox.currentIndex()
 
 
+      self.PolyDeg = self.spinBoxPolyDeg.value()
+      self.Percentile = self.doubleSpinPerc.value()
 
-    
+      if self.radioButtonPercentile.isChecked():
+          self.statMatch = "percentile"
+      elif self.radioButtonMean.isChecked():
+          self.statMatch = "mean"
+      else:
+          self.statMatch = "percentile"
 
-      
-      
-      
+
+      self.maxVal = 0.0
+      self.band = []
+      for k in range(self.band_count):
+          curBand = ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count)
+          self.maxVal = max(amax(curBand),self.maxVal)
+          self.band.append( curBand )
+
+      self.maxVal = int(math.ceil(self.maxVal))
+      ds = None
+
+
+      if self.setExt():
+          QMessageBox.about(None,'dehaze','Please Delineate Clear Sky pixels\nTerminating...')
+          self.iface.actionPan().trigger()
+          return
+
+      QMessageBox.about(None,'DeHaze', "Layer loaded: " + self.hl.name() + "\nClear Sky pixels selected.\nRed Band: "+str(self.redBand + 1) + "\nBlue Band: " + str(self.blueBand + 1)+" \n")
+      self.iface.actionPan().trigger()
+      self.runHOT()
+
+
+

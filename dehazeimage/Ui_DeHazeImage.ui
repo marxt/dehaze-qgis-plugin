@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>340</width>
-    <height>321</height>
+    <width>349</width>
+    <height>377</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -26,7 +26,7 @@
    <property name="geometry">
     <rect>
      <x>150</x>
-     <y>280</y>
+     <y>340</y>
      <width>176</width>
      <height>27</height>
     </rect>
@@ -42,7 +42,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>80</y>
+     <y>120</y>
      <width>299</width>
      <height>89</height>
     </rect>
@@ -78,16 +78,32 @@
       <item>
        <layout class="QGridLayout" name="gridLayout">
         <item row="0" column="0">
-         <widget class="QLineEdit" name="lineEditMinX"/>
+         <widget class="QLineEdit" name="lineEditMinX">
+          <property name="text">
+           <string>217000</string>
+          </property>
+         </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="lineEditMinY"/>
+         <widget class="QLineEdit" name="lineEditMinY">
+          <property name="text">
+           <string>845000</string>
+          </property>
+         </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QLineEdit" name="lineEditMaxX"/>
+         <widget class="QLineEdit" name="lineEditMaxX">
+          <property name="text">
+           <string>229000</string>
+          </property>
+         </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEditMaxY"/>
+         <widget class="QLineEdit" name="lineEditMaxY">
+          <property name="text">
+           <string>852000</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -157,7 +173,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>180</y>
+     <y>220</y>
      <width>161</width>
      <height>17</height>
     </rect>
@@ -171,38 +187,6 @@
     <rect>
      <x>20</x>
      <y>240</y>
-     <width>238</width>
-     <height>29</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_4">
-    <item>
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>Correction Function Deg.</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QSpinBox" name="spinBoxPolyDeg">
-      <property name="whatsThis">
-       <string>Degree of Correction Function. e.g. 1 -&gt; linear</string>
-      </property>
-      <property name="minimum">
-       <number>1</number>
-      </property>
-      <property name="maximum">
-       <number>30</number>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>200</y>
      <width>257</width>
      <height>29</height>
     </rect>
@@ -232,6 +216,102 @@
       </property>
       <property name="value">
        <double>5.000000000000000</double>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>80</y>
+     <width>301</width>
+     <height>29</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_6">
+    <item>
+     <widget class="QCheckBox" name="checkBoxMask">
+      <property name="text">
+       <string>Mask (Water, etc.)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="comboBoxMask"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>281</y>
+     <width>311</width>
+     <height>44</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_6">
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Correction</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Function Deg.</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QSpinBox" name="spinBoxPolyDeg">
+      <property name="whatsThis">
+       <string>Degree of Correction Function. e.g. 1 -&gt; linear</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>30</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_7">
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Value </string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>scaling</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QSpinBox" name="spinBoxScaling">
+      <property name="whatsThis">
+       <string>Degree of Correction Function. e.g. 1 -&gt; linear</string>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>100000</number>
       </property>
      </widget>
     </item>

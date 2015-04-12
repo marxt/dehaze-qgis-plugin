@@ -221,7 +221,6 @@ class DeHazeImage:
       tFile.write("CL Mean HOT:\t"+str(clMeanHOT)+ "\n")
       tFile.write("CL Max HOT:\t"+str(clMaxHOT)+ "\n")
 
-      """
       #
       #normalization/translation
       if self.checkBoxMask.isChecked():
@@ -236,10 +235,6 @@ class DeHazeImage:
           HOT = HOT - HOTmin
       HOTmax = int(amax(HOT))
       print HOTmin
-      """
-      HOT = greater(HOT, 0) * HOT
-      HOTmax = int(amax(HOT))
-      HOTmin = int(amin(HOT))
       #
       tFile.write("HOT min:\t"+str(HOTmin)+ "\n")
       #print HOT
@@ -254,7 +249,7 @@ class DeHazeImage:
       fileInfo2 = QFileInfo(file2)
       fn2 = fileInfo2.filePath()
       
-      outDatasetHOT = driver.Create(str(fn2), self.cols_count, self.rows_count, 1, GDT_UInt16)
+      outDatasetHOT = driver.Create(str(fn2), self.cols_count, self.rows_count, 1, GDT_Int16)
       outDatasetHOT.SetGeoTransform(self.GT)
       outDatasetHOT.SetProjection(self.Gref)
       outBandHOT = outDatasetHOT.GetRasterBand(1)
@@ -350,7 +345,6 @@ class DeHazeImage:
 
           print "band" + str(k)
           for q in HOTvalues:
-              #if q == 0 or q <= clMeanHOT:
               if q == 0:
                   continue
               if self.checkBoxMask.isChecked():
@@ -358,7 +352,6 @@ class DeHazeImage:
               else:
                   m = equal(HOT,q)
               e = extract(m,self.band[k][:])
-              e.size
               print e
 
               if self.statMatch == "percentile":
@@ -369,14 +362,13 @@ class DeHazeImage:
                   HOTstat[k,q] = percentile(e,self.Percentile)
 
 
-              lineP = "Band" + str(k) +"\t"+str(q) + "\t" + str(HOTstat[k,q]) + "\t" + str(CLstat[k]) + "\t" +str(e.size) +"\n"
+              lineP = "Band" + str(k) +"\t"+str(q) + "\t" + str(HOTstat[k,q]) + "\t" + str(CLstat[k]) + "\n"
               print lineP
               tFile.write(lineP)
                   #lr
-              if HOTstat[k,q] - CLstat[k] > 0:
-                  tempy[tempcnt] = HOTstat[k,q] - CLstat[k]
-                  tempx[tempcnt] = q
-                  tempcnt += 1
+              tempy[tempcnt] = HOTstat[k,q] - CLstat[k]
+              tempx[tempcnt] = q
+              tempcnt += 1
 
               m = None
               yy = yy + 1 #a3

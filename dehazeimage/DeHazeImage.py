@@ -213,11 +213,12 @@ class DeHazeImage:
           HOT = HOT * greater(HOT,0)
       """
 
-
+      clMinHOT = int(amin(HOT[self.Top:self.Bottom,self.Left:self.Right]))
       clMeanHOT = int(mean(HOT[self.Top:self.Bottom,self.Left:self.Right]))
       clMaxHOT = amax(HOT[self.Top:self.Bottom,self.Left:self.Right])
       print "max CL Hot", clMaxHOT
       print "mean CL Hot", clMeanHOT
+      tFile.write("CL Min HOT:\t"+str(clMinHOT)+ "\n")
       tFile.write("CL Mean HOT:\t"+str(clMeanHOT)+ "\n")
       tFile.write("CL Max HOT:\t"+str(clMaxHOT)+ "\n")
 
@@ -271,11 +272,25 @@ class DeHazeImage:
 
 
       #getting CL statistic (mean)
-      CLstat = zeros((self.band_count)).astype(dtype(integer))
+      CLmean = zeros((self.band_count)).astype(dtype(integer))
+      CLstat = zeros((self.band_count)).astype(dtype(integer)) #mean
+      CLstat1 = zeros((self.band_count)).astype(dtype(integer)) #min
+      CLstat2 = zeros((self.band_count)).astype(dtype(integer)) #5 perc
+      CLstat3 = zeros((self.band_count)).astype(dtype(integer)) #50 perc
+      CLstat4 = zeros((self.band_count)).astype(dtype(integer)) #100
 
       for k in range(self.band_count):
           cll = self.band[k][self.Top:self.Bottom,self.Left:self.Right]
           #print cll
+          CLmean[k] = mean(cll)
+          CLstat[k] = mean(cll)
+          CLstat1[k] = amin(cll)
+          CLstat2[k] = percentile(cll,5)
+          CLstat3[k] = percentile(cll,50)
+          CLstat4[k] = percentile(cll,100)
+          tFile.write("Band %d:\t%d\t%d\t%d\t%d\t%d\n" % (k+1, CLstat[k],CLstat1[k],CLstat2[k],CLstat3[k],CLstat4[k]))
+
+          """
           if self.statMatch == "percentile":
               CLstat[k] = percentile(cll,self.Percentile)
               tFile.write("%s %f Band %d: %d\n" % (self.statMatch, self.Percentile, k+1, CLstat[k]))
@@ -285,7 +300,7 @@ class DeHazeImage:
           else:
               CLstat[k] = percentile(cll,self.Percentile)
               tFile.write("%s %f Band %d: %d\n" % (self.statMatch, self.Percentile, k+1, CLstat[k]))
-
+          """ # commenting for stat gen
       """
       # getting HOT statistic (mean)
       HOThist = zeros((self.band_count,HOTmax +1,self.maxVal)).astype(integer)
@@ -322,6 +337,12 @@ class DeHazeImage:
       HOThistmean = HOThistsum / HOThistcnt
       """
       HOTstat = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+
+      HOTstat1 = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+      HOTstat2 = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+      HOTstat3 = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+      HOTstat4 = zeros((self.band_count,HOTmax +1)).astype(dtype(integer))
+
       HOTvalues = unique(HOT[:]*self.mask)
       startHOTval = int(percentile(HOTvalues,2))
       stopHOTval= int(percentile(HOTvalues,98))
@@ -361,20 +382,27 @@ class DeHazeImage:
               e.size
               print e
 
+              """
               if self.statMatch == "percentile":
                   HOTstat[k,q] = percentile(e,self.Percentile)
               elif self.statMatch == "mean":
                   HOTstat[k,q] = mean(e)
               else:
                   HOTstat[k,q] = percentile(e,self.Percentile)
+              """
+              HOTstat[k,q] = mean(e)
+              HOTstat1[k,q] = amin(e)
+              HOTstat2[k,q] = percentile(e,5)
+              HOTstat3[k,q] = percentile(e,50)
+              HOTstat4[k,q] = percentile(e,100)
 
-
-              lineP = "Band" + str(k) +"\t"+str(q) + "\t" + str(HOTstat[k,q]) + "\t" + str(CLstat[k]) + "\t" +str(e.size) +"\n"
+              lineP = "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (k+1, q, e.size, HOTstat[k,q],HOTstat1[k,q],HOTstat2[k,q],HOTstat3[k,q],HOTstat4[k,q])
+              #lineP = str(k+1) +"\t"+str(q) + "\t" + str(HOTstat[k,q]) + "\t" + str(CLstat[k]) + "\t" +str(e.size) +"\n"
               print lineP
               tFile.write(lineP)
                   #lr
-              if HOTstat[k,q] - CLstat[k] > 0:
-                  tempy[tempcnt] = HOTstat[k,q] - CLstat[k]
+              if HOTstat1[k,q] - CLstat1[k] > 0:
+                  tempy[tempcnt] = HOTstat1[k,q] - CLstat1[k]
                   tempx[tempcnt] = q
                   tempcnt += 1
 
@@ -426,7 +454,14 @@ class DeHazeImage:
           val = greater(val,0.0) * val
           val = (self.band[k] - val) / self.scaleFactor #* mask
           if self.checkBoxMask.isChecked():
+              csaf = self.meanBand[k] - mean(extract(self.mask,val))
+              #clear sky aerosol fraction
+              print csaf
+              val = val + csaf
               val = self.mask * val
+          else:
+              csaf = self.meanBand[k] - mean(val)
+              val = val + csaf
           outDataset.GetRasterBand(k +1).WriteArray(val, 0, 0)
           outDataset.GetRasterBand(k +1).FlushCache()
 
@@ -582,11 +617,16 @@ class DeHazeImage:
 
       self.maxVal = 0.00
       self.band = []
+
+      self.meanBand = zeros((self.band_count))
+
       for k in range(self.band_count):
           if self.checkBoxMask.isChecked():
               curBand = (ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count)*self.mask*self.scaleFactor).astype(dtype(float))
+              self.meanBand[k] = mean(extract(self.mask,curBand))
           else:
               curBand = (ds.GetRasterBand(k+1).ReadAsArray(0, 0, self.cols_count, self.rows_count)*self.scaleFactor).astype(dtype(float))
+              self.meanBand[k] = mean(curBand)
           print curBand
           self.maxVal = max(amax(curBand),self.maxVal)
           self.band.append( curBand )
